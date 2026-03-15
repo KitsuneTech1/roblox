@@ -93,7 +93,27 @@ local function createButton(name, text, index)
 end
 
 -- Create Action Buttons
-local speedBtn = createButton("SpeedButton", "Set WalkSpeed (100)", 1)
+local speedInput = Instance.new("TextBox")
+speedInput.Name = "SpeedInput"
+speedInput.Size = UDim2.new(0, 180, 0, 40)
+speedInput.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+speedInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedInput.Font = Enum.Font.SourceSansBold
+speedInput.TextSize = 18
+speedInput.PlaceholderText = "Enter Speed (e.g. 100)"
+speedInput.Text = ""
+speedInput.LayoutOrder = 1
+speedInput.ClearTextOnFocus = false
+
+local strokeSpeed = Instance.new("UIStroke")
+strokeSpeed.Color = Color3.fromRGB(100, 100, 100)
+strokeSpeed.Thickness = 1
+strokeSpeed.Parent = speedInput
+local cornerSpeed = Instance.new("UICorner")
+cornerSpeed.CornerRadius = UDim.new(0, 4)
+cornerSpeed.Parent = speedInput
+
+speedInput.Parent = mainPanel
 local godModeBtn = createButton("GodModeButton", "God Mode (Inf HP)", 2)
 local currencyBtn = createButton("CurrencyButton", "Add 1000 Coins", 3)
 
@@ -103,12 +123,20 @@ toggleBtn.MouseButton1Click:Connect(function()
 end)
 
 -- Execute Admin Commands (Client-Side execution)
-speedBtn.MouseButton1Click:Connect(function()
-	local char = player.Character or player.CharacterAdded:Wait()
-	local humanoid = char:FindFirstChild("Humanoid")
-	if humanoid then
-		humanoid.WalkSpeed = 100
-		print("Admin: Set WalkSpeed to 100")
+speedInput.FocusLost:Connect(function(enterPressed)
+	local newSpeed = tonumber(speedInput.Text)
+	if newSpeed then
+		local char = player.Character or player.CharacterAdded:Wait()
+		local humanoid = char:FindFirstChild("Humanoid")
+		if humanoid then
+			humanoid.WalkSpeed = newSpeed
+			print("Admin: Set WalkSpeed to " .. tostring(newSpeed))
+		end
+	else
+		speedInput.Text = ""
+		speedInput.PlaceholderText = "Invalid Number!"
+		task.wait(1.5)
+		speedInput.PlaceholderText = "Enter Speed (e.g. 100)"
 	end
 end)
 
@@ -134,6 +162,7 @@ currencyBtn.MouseButton1Click:Connect(function()
 	
 	local coins = leaderstats:FindFirstChild("Coins")
 	if not coins then
+		-- Handle games that might use 'Cash', 'Gold', etc. instead of 'Coins'
 		coins = Instance.new("IntValue")
 		coins.Name = "Coins"
 		coins.Value = 0
@@ -141,7 +170,9 @@ currencyBtn.MouseButton1Click:Connect(function()
 		print("Admin: Created missing Coins value locally.")
 	end
 	
-	coins.Value = coins.Value + 1000
+	-- Force UI update if there is a local script listening
+	local currentValue = coins.Value
+	coins.Value = currentValue + 1000
 	print("Admin: Added 1000 Coins. Total: " .. tostring(coins.Value))
 end)
 
