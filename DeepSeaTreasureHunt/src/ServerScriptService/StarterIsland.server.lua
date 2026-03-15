@@ -10,6 +10,53 @@ island.Color = Color3.fromRGB(194, 178, 128) -- Sand color
 island.Material = Enum.Material.Sand
 island.Parent = Workspace
 
+-- Palm Tree Function
+local function createPalmTree(pos)
+    local trunk = Instance.new("Part")
+    trunk.Name = "Trunk"
+    trunk.Size = Vector3.new(2, 15, 2)
+    trunk.Position = pos + Vector3.new(0, 7.5, 0)
+    trunk.Anchored = true
+    trunk.Color = Color3.fromRGB(101, 67, 33)
+    trunk.Material = Enum.Material.Wood
+    trunk.Parent = Workspace
+    
+    local leaves = Instance.new("Part")
+    leaves.Name = "Leaves"
+    leaves.Shape = Enum.PartType.Ball
+    leaves.Size = Vector3.new(12, 4, 12)
+    leaves.Position = pos + Vector3.new(0, 15, 0)
+    leaves.Anchored = true
+    leaves.Color = Color3.fromRGB(34, 139, 34)
+    leaves.Material = Enum.Material.Grass
+    leaves.Parent = Workspace
+end
+
+createPalmTree(Vector3.new(30, 5, 30))
+createPalmTree(Vector3.new(-30, 5, 30))
+createPalmTree(Vector3.new(-30, 5, -30))
+
+-- Campfire
+local firePart = Instance.new("Part")
+firePart.Name = "Campfire"
+firePart.Size = Vector3.new(4, 1, 4)
+firePart.Position = Vector3.new(15, 5, 15)
+firePart.Anchored = true
+firePart.Color = Color3.fromRGB(50, 50, 50)
+firePart.Material = Enum.Material.Slate
+firePart.Parent = Workspace
+
+local fire = Instance.new("Fire")
+fire.Heat = 5
+fire.Size = 5
+fire.Parent = firePart
+
+local light = Instance.new("PointLight")
+light.Brightness = 3
+light.Range = 15
+light.Color = Color3.fromRGB(255, 150, 50)
+light.Parent = firePart
+
 -- Create a SpawnLocation on the island
 local spawnPoint = Instance.new("SpawnLocation")
 spawnPoint.Name = "StarterSpawn"
