@@ -25,10 +25,10 @@ local PREDATORS = {
 
 -- Layer Difficulty Settings
 local DIFFICULTY = {
-    REEF_EDGE = { Speed = 15, Size = 1.0, Count = 10, Type = PREDATORS.SHARK, MinY = -350, MaxY = -150 },
-    TWILIGHT = { Speed = 25, Size = 1.5, Count = 15, Type = PREDATORS.SHARK, MinY = -600, MaxY = -350 },
-    ABYSSAL = { Speed = 40, Size = 2.5, Count = 20, Type = PREDATORS.SHARK, MinY = -850, MaxY = -600 },
-    VOID = { Speed = 60, Size = 8.0, Count = 5, Type = PREDATORS.LEVIATHAN, MinY = -2000, MaxY = -850 }
+    REEF_EDGE = { Speed = 25, Size = 1.0, Count = 10, Type = PREDATORS.SHARK, MinY = -350, MaxY = -150 },
+    TWILIGHT = { Speed = 40, Size = 1.5, Count = 15, Type = PREDATORS.SHARK, MinY = -600, MaxY = -350 },
+    ABYSSAL = { Speed = 60, Size = 2.5, Count = 20, Type = PREDATORS.SHARK, MinY = -850, MaxY = -600 },
+    VOID = { Speed = 100, Size = 8.0, Count = 5, Type = PREDATORS.LEVIATHAN, MinY = -2000, MaxY = -850 }
 }
 
 function SharkManager.SpawnPredator(config)
@@ -46,6 +46,7 @@ function SharkManager.SpawnPredator(config)
     predator.Material = Enum.Material.SmoothPlastic
     predator.CanCollide = false
     predator.Anchored = false
+    predator.Massless = true -- Make it easier to move
     
     -- Visuals: Shark-like shape
     local mesh = Instance.new("SpecialMesh")
@@ -53,25 +54,25 @@ function SharkManager.SpawnPredator(config)
     mesh.Scale = Vector3.new(1, 0.8, 2)
     mesh.Parent = predator
 
+    -- Physical Constraints for Movement
     local attachment = Instance.new("Attachment")
     attachment.Parent = predator
 
-    local alignPosition = Instance.new("AlignPosition")
-    alignPosition.Attachment0 = attachment
-    alignPosition.Mode = Enum.PositionAlignmentMode.OneAttachment
-    alignPosition.MaxForce = 100000 * config.Size
-    alignPosition.Responsiveness = 10
-    alignPosition.Parent = predator
+    local linearVelocity = Instance.new("LinearVelocity")
+    linearVelocity.MaxForce = 999999
+    linearVelocity.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+    linearVelocity.Attachment0 = attachment
+    linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
+    linearVelocity.Parent = predator
 
     local alignOrientation = Instance.new("AlignOrientation")
+    alignOrientation.MaxTorque = 999999
+    alignOrientation.Responsiveness = 20
     alignOrientation.Attachment0 = attachment
     alignOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
-    alignOrientation.MaxTorque = 100000 * config.Size
-    alignOrientation.Responsiveness = 10
     alignOrientation.Parent = predator
 
     -- AI State Variables
-    local targetPlayer = nil
     local patrolTarget = predator.Position
 
     -- Damage logic
@@ -80,7 +81,6 @@ function SharkManager.SpawnPredator(config)
         local humanoid = character:FindFirstChild("Humanoid")
         if humanoid then
             humanoid:TakeDamage(config.Type.Damage)
-            -- Knockback or simple cooldown could be added here
         end
     end)
 
@@ -92,40 +92,44 @@ function SharkManager.SpawnPredator(config)
             local currentPos = predator.Position
             
             -- Find nearest player
-            targetPlayer = nil
+            local targetPart = nil
             local nearestDist = config.Type.DetectionRange
             for _, player in ipairs(Players:GetPlayers()) do
                 local char = player.Character
-                if char and char:FindFirstChild("HumanoidRootPart") then
-                    local dist = (char.HumanoidRootPart.Position - currentPos).Magnitude
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                if root then
+                    local dist = (root.Position - currentPos).Magnitude
                     if dist < nearestDist then
                         nearestDist = dist
-                        targetPlayer = char.HumanoidRootPart
+                        targetPart = root
                     end
                 end
             end
 
-            if targetPlayer then
+            local destination = patrolTarget
+            if targetPart then
                 -- CHASE
-                alignPosition.Position = targetPlayer.Position
-                alignOrientation.CFrame = CFrame.lookAt(currentPos, targetPlayer.Position)
+                destination = targetPart.Position
             else
                 -- PATROL
-                if (currentPos - patrolTarget).Magnitude < 20 then
+                if (currentPos - patrolTarget).Magnitude < 30 then
                     patrolTarget = Vector3.new(
                         rng:NextNumber(-950, 950),
                         rng:NextNumber(config.MinY, config.MaxY),
                         rng:NextNumber(-950, 950)
                     )
                 end
-                alignPosition.Position = patrolTarget
-                alignOrientation.CFrame = CFrame.lookAt(currentPos, patrolTarget)
+                destination = patrolTarget
             end
             
-            -- Dynamic speed
-            alignPosition.MaxVelocity = config.Speed
+            -- Update Movement
+            local direction = (destination - currentPos).Unit
+            if destination == currentPos then direction = Vector3.new(0,0,0) end
             
-            task.wait(0.5)
+            linearVelocity.VectorVelocity = direction * config.Speed
+            alignOrientation.CFrame = CFrame.lookAt(currentPos, currentPos + direction)
+            
+            task.wait(0.1) -- Faster update for smoother AI
         end
     end)
 

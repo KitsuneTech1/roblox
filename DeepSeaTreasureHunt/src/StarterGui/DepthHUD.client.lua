@@ -14,6 +14,10 @@ local LAYERS = {
 }
 
 local function createHUD()
+    -- Ensure old HUD is removed
+    local existing = playerGui:FindFirstChild("DepthHUD")
+    if existing then existing:Destroy() end
+
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "DepthHUD"
     screenGui.ResetOnSpawn = false
@@ -21,73 +25,92 @@ local function createHUD()
 
     local container = Instance.new("Frame")
     container.Name = "Container"
-    container.Size = UDim2.new(0.05, 0, 0.6, 0)
-    container.Position = UDim2.new(0.92, 0, 0.2, 0)
-    container.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    container.BackgroundTransparency = 0.5
-    container.BorderSizePixel = 2
+    container.Size = UDim2.new(0.08, 0, 0.6, 0)
+    container.Position = UDim2.new(0.9, 0, 0.2, 0)
+    container.BackgroundTransparency = 1
     container.Parent = screenGui
-
-    local uiCorner = Instance.new("UICorner")
-    uiCorner.CornerRadius = UDim.new(0, 8)
-    uiCorner.Parent = container
 
     -- Depth Bar Background
     local bar = Instance.new("Frame")
     bar.Name = "Bar"
-    bar.Size = UDim2.new(0.2, 0, 0.9, 0)
-    bar.Position = UDim2.new(0.4, 0, 0.05, 0)
+    bar.Size = UDim2.new(0.15, 0, 0.9, 0)
+    bar.Position = UDim2.new(0.7, 0, 0.05, 0)
     bar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    bar.BorderSizePixel = 0
     bar.Parent = container
+
+    local barCorner = Instance.new("UICorner")
+    barCorner.CornerRadius = UDim.new(0, 4)
+    barCorner.Parent = bar
 
     -- Layer Colors on Bar
     for i, layer in ipairs(LAYERS) do
         local layerIndicator = Instance.new("Frame")
         layerIndicator.Name = layer.Name
         
-        -- Map depth to Y position (normalized 0 to 1)
-        local totalRange = 1000 -- Max depth we track visually
+        local totalRange = 1000 -- Display range
         local top = math.abs(layer.MaxY) / totalRange
         local bottom = math.abs(layer.MinY) / totalRange
         
-        layerIndicator.Size = UDim2.new(1, 0, bottom - top, 0)
-        layerIndicator.Position = UDim2.new(0, 0, top, 0)
+        layerIndicator.Size = UDim2.new(1, 0, math.clamp(bottom - top, 0, 1), 0)
+        layerIndicator.Position = UDim2.new(0, 0, math.clamp(top, 0, 1), 0)
         layerIndicator.BackgroundColor3 = layer.Color
         layerIndicator.BorderSizePixel = 0
         layerIndicator.Parent = bar
     end
 
+    -- Marker Container (moves with player)
+    local markerFrame = Instance.new("Frame")
+    markerFrame.Name = "MarkerFrame"
+    markerFrame.Size = UDim2.new(1, 0, 0, 0)
+    markerFrame.Position = UDim2.new(0, 0, 0, 0)
+    markerFrame.BackgroundTransparency = 1
+    markerFrame.Parent = bar
+
+    -- The Line next to profile pic
+    local line = Instance.new("Frame")
+    line.Name = "IndicatorLine"
+    line.Size = UDim2.new(1.5, 0, 0, 2)
+    line.Position = UDim2.new(-1.5, 0, 0, -1)
+    line.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    line.BorderSizePixel = 0
+    line.Parent = markerFrame
+
     -- Player Marker (Profile Picture)
     local marker = Instance.new("ImageLabel")
     marker.Name = "PlayerMarker"
-    marker.Size = UDim2.new(2.5, 0, 0, 0) -- Aspect ratio set by script
-    marker.Position = UDim2.new(-0.75, 0, 0, 0)
-    marker.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    marker.Size = UDim2.new(3, 0, 3, 0) -- Bigger for visibility
+    marker.Position = UDim2.new(-4.8, 0, 0, 0)
+    marker.AnchorPoint = Vector2.new(0, 0.5)
+    marker.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     marker.BorderSizePixel = 2
+    marker.BorderColor3 = Color3.fromRGB(255, 255, 255)
     marker.ZIndex = 5
-    marker.Parent = bar
+    marker.Parent = markerFrame
     
     local markerCorner = Instance.new("UICorner")
     markerCorner.CornerRadius = UDim.new(1, 0)
     markerCorner.Parent = marker
     
-    -- Set Profile Picture
-    local userId = player.UserId
-    local thumbType = Enum.ThumbnailType.HeadShot
-    local thumbSize = Enum.ThumbnailSize.Size420x420
-    local content, isReady = Players:GetUserThumbnailAsync(userId, thumbType, thumbSize)
-    marker.Image = content
-
-    -- Aspect ratio constraint for marker
     local aspect = Instance.new("UIAspectRatioConstraint")
     aspect.AspectRatio = 1
     aspect.Parent = marker
+    
+    -- Load Profile Picture
+    task.spawn(function()
+        local success, content = pcall(function()
+            return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+        end)
+        if success then
+            marker.Image = content
+        end
+    end)
 
     -- Depth Text
     local depthLabel = Instance.new("TextLabel")
     depthLabel.Name = "DepthLabel"
-    depthLabel.Size = UDim2.new(2, 0, 0.05, 0)
-    depthLabel.Position = UDim2.new(-0.5, 0, 1.02, 0)
+    depthLabel.Size = UDim2.new(3, 0, 0.05, 0)
+    depthLabel.Position = UDim2.new(-2, 0, 1.02, 0)
     depthLabel.BackgroundTransparency = 1
     depthLabel.Text = "0m"
     depthLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -98,8 +121,8 @@ local function createHUD()
     -- Layer Name Text
     local layerLabel = Instance.new("TextLabel")
     layerLabel.Name = "LayerLabel"
-    layerLabel.Size = UDim2.new(4, 0, 0.05, 0)
-    layerLabel.Position = UDim2.new(-1.5, 0, -0.07, 0)
+    layerLabel.Size = UDim2.new(5, 0, 0.05, 0)
+    layerLabel.Position = UDim2.new(-3, 0, -0.07, 0)
     layerLabel.BackgroundTransparency = 1
     layerLabel.Text = "Surface"
     layerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -110,17 +133,17 @@ local function createHUD()
     -- Update Loop
     RunService.RenderStepped:Connect(function()
         local character = player.Character
-        if not character then return end
-        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
         if not rootPart then return end
 
-        local depth = math.floor(rootPart.Position.Y)
-        depthLabel.Text = tostring(math.abs(depth)) .. "m"
+        local depth = rootPart.Position.Y
+        local absDepth = math.abs(math.floor(depth))
+        depthLabel.Text = tostring(absDepth) .. "m"
 
         -- Update Marker Position
         local totalRange = 1000
         local normalizedDepth = math.clamp(math.abs(depth) / totalRange, 0, 1)
-        marker.Position = UDim2.new(-0.75, 0, normalizedDepth, -marker.AbsoluteSize.Y/2)
+        markerFrame.Position = UDim2.new(0, 0, normalizedDepth, 0)
 
         -- Update Layer Label
         local currentLayer = "Deep Water"
