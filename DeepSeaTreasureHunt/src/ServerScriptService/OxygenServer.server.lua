@@ -33,9 +33,9 @@ Players.PlayerAdded:Connect(function(player)
             
             -- If player is underwater (Y coordinate is below 0)
             if depth < -5 then
-                -- Base depletion rate + depth penalty
-                -- Depth penalty increases by 0.5 for every 100 studs deep
-                local depthPenalty = math.abs(depth) / 100 * 0.5
+                -- Base depletion rate + depth penalty (REDUCED FOR BETTER PROGRESSION)
+                -- Depth penalty increases by 0.1 for every 100 studs deep (was 0.5)
+                local depthPenalty = math.abs(depth) / 100 * 0.1
                 local currentDepletionRate = OXYGEN_DEPLETION_RATE + depthPenalty
                 
                 oxygen.Value = math.max(0, oxygen.Value - (currentDepletionRate * deltaTime))
