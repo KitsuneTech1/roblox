@@ -58,6 +58,16 @@ titleLabel.TextSize = 20
 titleLabel.Text = "Admin Menu (Local)"
 titleLabel.Parent = mainPanel
 
+local coinDisplay = Instance.new("TextLabel")
+coinDisplay.Name = "CoinDisplay"
+coinDisplay.Size = UDim2.new(1, 0, 0, 20)
+coinDisplay.BackgroundTransparency = 1
+coinDisplay.TextColor3 = Color3.fromRGB(255, 215, 0)
+coinDisplay.Font = Enum.Font.SourceSans
+coinDisplay.TextSize = 16
+coinDisplay.Text = "Coins: 0"
+coinDisplay.Parent = mainPanel
+
 local uiListLayout = Instance.new("UIListLayout")
 uiListLayout.Parent = mainPanel
 uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -66,7 +76,7 @@ uiListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
 local uiPadding = Instance.new("UIPadding")
 uiPadding.Parent = mainPanel
-uiPadding.PaddingTop = UDim.new(0, 40)
+uiPadding.PaddingTop = UDim.new(0, 65)
 
 -- Function to create menu buttons
 local function createButton(name, text, index)
@@ -112,8 +122,8 @@ strokeSpeed.Parent = speedInput
 local cornerSpeed = Instance.new("UICorner")
 cornerSpeed.CornerRadius = UDim.new(0, 4)
 cornerSpeed.Parent = speedInput
-
 speedInput.Parent = mainPanel
+
 local godModeBtn = createButton("GodModeButton", "God Mode (Inf HP)", 2)
 local currencyBtn = createButton("CurrencyButton", "Add 1000 Coins", 3)
 
@@ -122,58 +132,42 @@ toggleBtn.MouseButton1Click:Connect(function()
 	mainPanel.Visible = not mainPanel.Visible
 end)
 
--- Execute Admin Commands (Client-Side execution)
+-- Execute Admin Commands (Firing Server via Remote)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local AdminRemote = ReplicatedStorage:WaitForChild("AdminRemote")
+
 speedInput.FocusLost:Connect(function(enterPressed)
-	local newSpeed = tonumber(speedInput.Text)
-	if newSpeed then
-		local char = player.Character or player.CharacterAdded:Wait()
-		local humanoid = char:FindFirstChild("Humanoid")
-		if humanoid then
-			humanoid.WalkSpeed = newSpeed
-			print("Admin: Set WalkSpeed to " .. tostring(newSpeed))
+	if enterPressed then
+		local num = tonumber(speedInput.Text)
+		if num then
+			AdminRemote:FireServer("SetSpeed", num)
+			print("Admin: Requested Speed " .. num)
 		end
-	else
 		speedInput.Text = ""
-		speedInput.PlaceholderText = "Invalid Number!"
-		task.wait(1.5)
-		speedInput.PlaceholderText = "Enter Speed (e.g. 100)"
 	end
 end)
 
 godModeBtn.MouseButton1Click:Connect(function()
-	local char = player.Character or player.CharacterAdded:Wait()
-	local humanoid = char:FindFirstChild("Humanoid")
-	if humanoid then
-		humanoid.MaxHealth = math.huge
-		humanoid.Health = math.huge
-		print("Admin: Enabled God Mode")
-	end
+	AdminRemote:FireServer("GodMode")
+	print("Admin: Requested God Mode")
 end)
 
 currencyBtn.MouseButton1Click:Connect(function()
-	local leaderstats = player:FindFirstChild("leaderstats")
-	if not leaderstats then
-		-- Create dummy leaderstats locally if they don't exist
-		leaderstats = Instance.new("Folder")
-		leaderstats.Name = "leaderstats"
-		leaderstats.Parent = player
-		print("Admin: Created missing leaderstats folder locally.")
-	end
-	
-	local coins = leaderstats:FindFirstChild("Coins")
-	if not coins then
-		-- Handle games that might use 'Cash', 'Gold', etc. instead of 'Coins'
-		coins = Instance.new("IntValue")
-		coins.Name = "Coins"
-		coins.Value = 0
-		coins.Parent = leaderstats
-		print("Admin: Created missing Coins value locally.")
-	end
-	
-	-- Force UI update if there is a local script listening
-	local currentValue = coins.Value
-	coins.Value = currentValue + 1000
-	print("Admin: Added 1000 Coins. Total: " .. tostring(coins.Value))
+	AdminRemote:FireServer("AddCoins", 1000)
+	print("Admin: Requested 1000 Coins")
+end)
+
+-- Coin Display Update
+task.spawn(function()
+    while task.wait(0.5) do
+        local leaderstats = player:FindFirstChild("leaderstats")
+        local coins = leaderstats and leaderstats:FindFirstChild("Coins")
+        if coins then
+            coinDisplay.Text = "Coins: " .. tostring(coins.Value)
+        else
+            coinDisplay.Text = "Coins: (Loading...)"
+        end
+    end
 end)
 
 -- Parent mapping happens last to draw the UI securely
