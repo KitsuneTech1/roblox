@@ -1,6 +1,6 @@
-# Lua Minecraft Project
+# Roblox Minecraft Project
 
-This is a Lua-based project for a Minecraft game that I am building together with my siblings. We are using [Rojo](https://github.com/rojo-rbx/rojo) to manage our development workflow and sync code.
+This is a **Roblox** project for a Minecraft-style game that I am building together with my siblings using Lua. We are using [Rojo](https://github.com/rojo-rbx/rojo) to manage our development workflow and sync code from VS Code to Roblox Studio.
 
 ## Development Setup
 
